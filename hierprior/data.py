@@ -148,6 +148,17 @@ def pick_held_out(hier, seed=0):
     return np.array(sorted(held))
 
 
+YEAR_GROUPS = ["2008 - 2010", "2011 - 2013", "2014 - 2016", "2017 - 2019", "2020 - 2022"]
+
+
+def year_group(coh):
+    """Per admission (coh row order): index into YEAR_GROUPS of the patient's
+    anchor_year_group, the 3-year bin their de-identified anchor year falls in."""
+    pat = pl.read_csv(ROOT / "patients.csv.gz", columns=["subject_id", "anchor_year_group"])
+    g = coh.select("subject_id").join(pat, on="subject_id", how="left")["anchor_year_group"]
+    return np.array([YEAR_GROUPS.index(x) for x in g.to_list()], np.int8)
+
+
 def load():
     coh, dx = build_cohort()
     hier = Hierarchy(dx["icd_code"].unique().to_list())

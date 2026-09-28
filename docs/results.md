@@ -206,9 +206,13 @@ Test AUROC, all / affected:
 | 5,229 | 0.643±0.005 / 0.631±0.008 | 0.639±0.009 / 0.632±0.007 | 0.654±0.007 / 0.646±0.008 | 0.660±0.006 / 0.653±0.006 |
 | 17,406 | 0.663±0.002 / 0.656±0.011 | 0.665±0.002 / 0.662±0.010 | 0.671±0.002 / 0.668±0.009 | 0.675±0.001 / 0.671±0.007 |
 | 52,347 | 0.682±0.001 / 0.669±0.010 | 0.683±0.001 / 0.672±0.008 | 0.688±0.001 / 0.678±0.009 | 0.689±0.001 / 0.679±0.009 |
+| 173,919 | 0.694 / 0.672 | 0.696 / 0.681 | 0.698 / 0.683 | 0.699 / 0.685 |
 
-(The full-data point, 174k admissions, is missing: that run was killed by
-memory pressure after ~4 CPU-hours and not rerun.)
+(The full-data run was first killed by memory pressure after ~4 CPU-hours.
+The 173,919 row was added later from a rerun with the faster solver (relative
+gradient tolerance, see `docs/results2.md`), which took 7 minutes. It is in
+`output/hier/runs_fast/` and is not in the figures above. On a 10k-admission
+protocol-B run the faster solver matches the original test AUROCs to 1e-4.)
 
 The same picture: the spec model is at most +0.01 over the baseline, and only
 at the smallest size; beta = 0 and the ancestor indicators help most at small
@@ -267,7 +271,8 @@ codes accumulate (+0.008 with 2+ codes, single draw, n = 1,084 so roughly
   chapters/blocks; letters stand in for chapters.
 * The empirical-Bayes variances use a diagonal Laplace approximation; alpha is
   then a single global multiplier tuned on dev.
-* Protocol N's full-data point is missing (run killed by memory pressure).
+* Protocol N's full-data point comes from a later rerun with the faster
+  solver, so it is not in the figures.
 * Protocol B deviates from the idea doc (10% of groups instead of all)
   because the literal protocol leaves an unrepresentative training cohort;
   both are reported.
@@ -275,7 +280,7 @@ codes accumulate (+0.008 with 2+ codes, single draw, n = 1,084 so roughly
 ## Reproduce
 
 ```
-.venv/Scripts/python -m hierprior.experiment --jobs 10          # main grid (~hours; full-data runs dominate)
+.venv/Scripts/python -m hierprior.experiment --jobs 10          # main grid (hours with the original solver; faster since study 2)
 .venv/Scripts/python -m hierprior.experiment --protocols B --fracs 0.03,0.1 --models hier_b05,hier_b2 --sub runs_beta
 .venv/Scripts/python -m hierprior.univariate
 .venv/Scripts/python -m hierprior.analyze                       # figures + output/hier/summary.md

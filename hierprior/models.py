@@ -1,8 +1,12 @@
 """Logistic regression with (a) an L2 prior, (b) L2 on leaf + ancestor
 indicators ("rollup"), and (c) the hierarchical prior from docs/idea.md.
 
-All objectives are  sum-NLL + penalty  minimised with L-BFGS; the intercept
-is never penalised.
+All objectives are  sum-NLL + penalty  minimised by trust-region Newton-CG in
+Jacobi-scaled coordinates (_fit_deltas); the intercept is never penalised.
+The gradient tolerance scales with sqrt(total weight) (GTOL), i.e. it bounds
+the objective gap per admission; the original fixed 1e-5 (and L-BFGS at 1e-6
+for the L2 models) was far stricter than the AUROC needs and dominated the
+run time at full data.
 
 Hierarchical prior. Every tree node v has a parameter theta_v; a leaf's theta
 is the code's LR weight, an internal node's theta is the latent mean of its
@@ -32,14 +36,7 @@ import scipy.sparse as sp
 from scipy.optimize import minimize
 from scipy.special import expit, log_expit
 
-LBFGS = {"maxiter": 5000, "gtol": 1e-6, "ftol": 1e-12}
-
-
-def _nll_grad(X, y, w, b):
-    z = X @ w + b
-    loss = -(y * log_expit(z) + (1 - y) * log_expit(-z)).sum()
-    r = expit(z) - y
-    return loss, X.T @ r, r.sum()
+GTOL = 1e-3  # gradient-norm tolerance per sqrt(unit of weight, e.g. admission)
 
 
 class L2LR:
@@ -49,17 +46,9 @@ class L2LR:
         self.lam = lam
 
     def fit(self, X, y, x0=None):
-        if x0 is None:
-            x0 = np.zeros(X.shape[1] + 1)
-            x0[-1] = np.log(y.mean() / (1 - y.mean()))
-
-        def f(x):
-            w, b = x[:-1], x[-1]
-            l, gw, gb = _nll_grad(X, y, w, b)
-            return l + 0.5 * self.lam * w @ w, np.append(gw + self.lam * w, gb)
-
-        self.x = minimize(f, x0, jac=True, method="L-BFGS-B", options=LBFGS).x
-        self.w, self.b = self.x[:-1], self.x[-1]
+        b0 = np.log(y.mean() / (1 - y.mean()))
+        self.w, self.b, _, self.x = _fit_deltas(X, y, np.ones_like(y), True, b0,
+                                                np.full(X.shape[1], float(self.lam)), x0)
         return self
 
     def decision(self, X):
@@ -122,7 +111,7 @@ def _fit_deltas(M, k, wts, b_free, b0, prec, x0=None):
         return np.append(MsT @ Wz + pr * u, Wz.sum() if b_free else 0.0)
 
     x = minimize(f, x0, jac=True, hessp=hessp, method="trust-ncg",
-                 options={"gtol": 1e-5, "maxiter": 500}).x
+                 options={"gtol": GTOL * np.sqrt(wts.sum()), "maxiter": 500}).x
     d, b = x[:-1] * s, (x[-1] if b_free else b0)
     p = expit(M @ d + b)
     Hd = np.asarray(M2.T @ (wts * p * (1 - p))).ravel()

@@ -50,3 +50,44 @@ for unseen codes needs codes that are actually new: a calendar-year split built
 from estimated admission dates, or transfer to another hospital or to the
 ICD-9 to ICD-10 switch. Richer inputs (procedures, medications) would move
 absolute AUROC (0.70) more than any prior studied here.
+
+**Study 3: one-code mode** (`docs/results3.md`, `docs/results3_onecode.md`;
+chapter Z excluded). Readmission is predicted from a single code, the primary
+diagnosis. At full data, learning each code's weight with a hierarchical
+prior built from its ICD relatives gives dev AUROC 0.653 and removes 4.8% of
+the base-rate model's log-loss. With a naive
+N(0, s²) prior it gives 0.644 and 4.4%. The hierarchical posterior is best at
+every size from 1.7k training admissions up, by +0.009 to +0.034 AUROC. The
+prior alone, without any of the code's admissions, is worth about 20 of them
+(about 50-70 when every code occurrence is a prediction). A raw sibling average
+and the no-prior estimate are overconfident, and at most sizes they are worse
+than predicting the base rate. The prior fails where severity or setting
+varies within a prefix group (acute vs chronic heart failure, necrotising
+pancreatitis, childbirth vs pregnancy).
+
+**Synthesis: the vocabulary prior** (`docs/vocabulary_prior.md`; published page
+https://claude.ai/artifact/3QxAUwquXE4LYz1gQzPjt9). The three studies are one
+model: a code's effect is the sum of terms for its prefixes, a Gaussian process
+whose covariance is the variance two codes share along their common prefix.
+Its three predictions hold on held-out data. Codes sharing more leading
+characters have more similar readmission risk (correlation 0.22 for the same
+first letter, 0.55 for the same category). The leave-code-out prior is
+calibrated (95% of codes inside its 95% interval). Its worth in a code's own
+data is predicted from its measured error (24 admissions) and measured at 21 on
+dev and 29 on test for primary diagnoses. The test split was scored once for
+this synthesis and agrees with dev (vocabulary prior alone: AUROC 0.622).
+
+**Study 4: 1-year mortality and the official ICD levels** (`docs/results4.md`).
+The same one-code model and prior, run for death within a year of discharge
+(13.2% of admissions) and on trees built from the ICD-10-CM chapters, blocks
+and categories. For mortality the code's own data with the hierarchical prior
+is best at every size: primary diagnoses, AUROC 0.766 and 14.2% of the
+base-rate log-loss removed at full data, against 0.759 and 13.4% with a naive
+prior, and +0.05 to +0.07 AUROC up to 5k admissions. The prior alone removes
+10.0% (readmission 3.0%) and is calibrated. It is worth 16 of a code's own
+primary admissions (22 in every-code mode). The literal chapter + block + code
+model, one learnt coefficient per level, is a weaker prior than the prefix tree
+(−0.010 to −0.024 AUROC alone, 0 to −0.002 with own data), because it has no
+3-character category. With the category it ties with the prefix tree. For
+mortality most of the variation between codes is between chapters (pregnancy
+−3.4, neoplasms +1.1).

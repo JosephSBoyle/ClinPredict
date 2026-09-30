@@ -167,3 +167,79 @@ def load():
     subj = coh["subject_id"].to_numpy()
     split = split_patients(subj)
     return X, y, subj, split, hier
+
+
+ICD10CM = Path.home() / ".cache/pyhealth/medcode/ICD10CM.csv"
+
+
+class ICDTree(Hierarchy):
+    """The official ICD-10-CM levels: root -> chapter -> block -> 3-character
+    category -> code, from PyHealth's ICD10CM.csv (every category's parent is
+    a block such as "I30-I5A", whose parent is a chapter such as "I00-I99").
+    With category=False the code hangs directly under its block (chapter ->
+    block -> code). With subcategories=True the category is followed by the
+    code's longer prefixes (4, 5, 6 characters) as in the prefix tree. A code that is also
+    an inner node (a 3-character code under its own category, or a header
+    code) becomes the leaf "<code>$". Leaves and their columns are the same
+    as the prefix Hierarchy's for the same codes.
+
+    var_group gives every node its prior-variance group: one per (leaf or
+    inner node, depth), so the 4-level tree has one variance each for
+    chapter, block, category and code."""
+
+    def __init__(self, codes, category=True, subcategories=False):
+        d = pl.read_csv(ICD10CM, columns=["code", "parent_code"], schema_overrides={"parent_code": pl.Utf8})
+        par = dict(zip(d["code"].to_list(), d["parent_code"].to_list()))
+        codes = sorted(set(codes))
+        paths = {}
+        for c in codes:
+            block = par[c[:3]]
+            path = [par[block], block] + ([c[:3]] if category else [])
+            if subcategories:
+                path += [c[:k] for k in range(4, len(c))]
+            paths[c] = path
+        inner = {a for p in paths.values() for a in p}
+        self.leaves = codes
+        self.leaf_name = [c + "$" if c in inner else c for c in codes]
+        parent_of = {}
+        for c, name in zip(codes, self.leaf_name):
+            chain = ["<root>"] + paths[c] + [name]
+            for a, b in zip(chain[:-1], chain[1:]):
+                parent_of[b] = a
+        def depth(n):
+            k = 0
+            while n != "<root>":
+                n, k = parent_of[n], k + 1
+            return k
+        names = ["<root>"] + sorted(parent_of, key=lambda n: (depth(n), n))     # parents first
+        self.names = names
+        self.idx = {n: i for i, n in enumerate(names)}
+        parent = np.array([-1] + [self.idx[parent_of[n]] for n in names[1:]], dtype=np.int64)
+        self.parent = parent
+        self.leaf_node = np.array([self.idx[n] for n in self.leaf_name])
+        self.is_leaf = np.zeros(len(names), bool)
+        self.is_leaf[self.leaf_node] = True
+        assert (parent[1:] < np.arange(1, len(names))).all()
+        dep = np.zeros(len(names), dtype=np.int64)
+        for i in range(1, len(names)):
+            dep[i] = dep[parent[i]] + 1
+        self.depth = dep
+        self.col = {c: j for j, c in enumerate(codes)}
+        kinds = sorted({(bool(l), int(k)) for l, k in zip(self.is_leaf[1:], dep[1:])})
+        self.var_kinds = kinds                     # [(is_leaf, depth)] in theta order
+        g = {kd: i for i, kd in enumerate(kinds)}
+        self.var_group = np.array([-1] + [g[(bool(l), int(k))] for l, k in zip(self.is_leaf[1:], dep[1:])])
+
+
+def mortality_1y(coh):
+    """Per admission (coh row order): 1 if the patient's date of death is
+    within 365 days of this discharge. MIMIC-IV records out-of-hospital deaths
+    up to a year after a patient's last discharge, so the label is observed
+    for every admission. The cohort already excludes in-hospital deaths."""
+    adm = pl.read_csv(ROOT / "admissions.csv.gz", columns=["hadm_id", "dischtime"], try_parse_dates=True)
+    pat = pl.read_csv(ROOT / "patients.csv.gz", columns=["subject_id", "dod"], try_parse_dates=True)
+    c = (coh.select("subject_id", "hadm_id").join(adm, on="hadm_id", how="left")
+         .join(pat, on="subject_id", how="left"))
+    days = (pl.col("dod") - pl.col("dischtime").dt.date()).dt.total_days()
+    assert (c["hadm_id"] == coh["hadm_id"]).all()
+    return c.select((days <= 365).fill_null(False).cast(pl.Float64))[:, 0].to_numpy()

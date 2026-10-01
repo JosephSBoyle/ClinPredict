@@ -36,12 +36,12 @@ def to_torch(M):
 
 class Data:
     """Everything a model needs, for one task ("readmit" or "mort1y"),
-    design mode ("any" or "primary") and tree ("prefix", "icd3", "icd4", "icd_sub")."""
+    design mode ("any" or "primary") and tree ("prefix", "official_block", "official_category", "official_prefix")."""
 
     def __init__(self, task="readmit", mode="any", tree="prefix"):
         X, y_readmit, subj, split, hier = load()
         if tree != "prefix":
-            hier = ICDTree(hier.leaves, category=tree != "icd3", subcategories=tree == "icd_sub")
+            hier = ICDTree(hier.leaves, category=tree != "official_block", subcategories=tree == "official_prefix")
         if mode == "primary":
             X = primary_design(hier)
         y = y_readmit if task == "readmit" else mortality_1y(build_cohort()[0])
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--task", default="readmit", choices=["readmit", "mort1y"])
     ap.add_argument("--mode", default="any", choices=["any", "primary"])
-    ap.add_argument("--tree", default="prefix", choices=["prefix", "icd3", "icd4", "icd_sub"])
+    ap.add_argument("--tree", default="prefix", choices=["prefix", "official_block", "official_category", "official_prefix"])
     a = ap.parse_args()
     d = Data(a.task, a.mode, a.tree)
     train({"readmit": ReadmitModel, "mort1y": MortalityModel}[a.task](d), d)

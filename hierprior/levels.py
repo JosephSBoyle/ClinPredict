@@ -13,11 +13,11 @@ run for two outcomes on the same cohort, patient split and training subsets:
 and over four trees for the sum (data.Hierarchy, data.ICDTree):
 
   prefix   study 3: first letter -> 2, 3, ... characters -> code; 11 variances
-  icd3     the official levels chapter -> block -> code: every chapter, block
+  official_block     the official levels chapter -> block -> code: every chapter, block
            and code has its own learnt coefficient theta, one variance per
            level, and the code's weight is the sum of its three
-  icd4     chapter -> block -> 3-character category -> code; 4 variances
-  icd_sub  chapter -> block -> category -> 4, 5, 6 characters -> code; 10 variances
+  official_category     chapter -> block -> 3-character category -> code; 4 variances
+  official_prefix  chapter -> block -> category -> 4, 5, 6 characters -> code; 10 variances
 
 Each (outcome, mode, training fraction, seed) job fits all four trees on the
 same counts (onecode.estimate: variances by marginal likelihood, leave-code-out
@@ -30,8 +30,8 @@ Then, from the full-data fits:
                admissions, the same draws for every tree
   calibration  coverage of the leave-code-out prior's intervals
   correlogram  model-free correlation of two primary codes' log-odds shifts by
-               the deepest ICD level they share, with the icd4 tree's implied values
-  coefs        posterior of every chapter's and block's coefficient (icd3 and icd4)
+               the deepest ICD level they share, with the official_category tree's implied values
+  coefs        posterior of every chapter's and block's coefficient (official_block and official_category)
 
   .venv/Scripts/python -m hierprior.levels [--jobs 8]
 """
@@ -56,7 +56,7 @@ from hierprior.vocab import LEVELS, NMIN, ancestors_by_depth, curve_codes, curve
 
 OUT = Path("output/hier4")
 OUTCOMES = ("readmit", "mort1y")
-TREES = ("prefix", "icd3", "icd4", "icd_sub")
+TREES = ("prefix", "official_block", "official_category", "official_prefix")
 MODES = ("primary", "any")
 REL_FRACS = (0.03, 1.0)
 
@@ -64,8 +64,8 @@ REL_FRACS = (0.03, 1.0)
 def setup():
     X, y, subj, split, hier = load()
     coh, _ = build_cohort()
-    trees = {"prefix": hier, "icd3": ICDTree(hier.leaves, category=False), "icd4": ICDTree(hier.leaves),
-             "icd_sub": ICDTree(hier.leaves, subcategories=True)}
+    trees = {"prefix": hier, "official_block": ICDTree(hier.leaves, category=False), "official_category": ICDTree(hier.leaves),
+             "official_prefix": ICDTree(hier.leaves, subcategories=True)}
     assert all(t.leaves == hier.leaves for t in trees.values())
     return {"readmit": y, "mort1y": mortality_1y(coh)}, {"primary": primary_design(hier), "any": X}, subj, split, trees
 
@@ -138,12 +138,12 @@ def calibration(keep):
 def correlogram(trees, keep):
     """Primary mode: correlation of two codes' log-odds shifts by the deepest
     ICD level they share (0 = different chapter, 1 chapter, 2 block,
-    3 category), jackknife over chapters, and the icd4 tree's implied value."""
-    t = trees["icd4"]
+    3 category), jackknife over chapters, and the official_category tree's implied value."""
+    t = trees["official_category"]
     anc_all = ancestors_by_depth(t)
     out = {}
     for outcome in OUTCOMES:
-        z = load_est(outcome, "primary", "icd4")
+        z = load_est(outcome, "primary", "official_category")
         nT, kT, b0 = z["nT"], z["kT"], float(z["b0"])
         sel = keep & (nT >= NMIN)
         x, v = own(nT[sel], kT[sel], b0)
@@ -163,7 +163,7 @@ def correlogram(trees, keep):
     return out
 
 
-def coefs(trees, desc, tree="icd3"):
+def coefs(trees, desc, tree="official_block"):
     """Full data: posterior mean of every chapter's and block's coefficient
     theta_a = mu_a - mu_parent(a), and of mu_a (the sum of the coefficients
     down to a) with its sd, with the training admissions and outcome rate

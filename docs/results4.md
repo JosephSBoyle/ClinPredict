@@ -37,11 +37,11 @@ code's data. The only change here is the tree:
 | tree | levels on a code's path (θ terms) | variances |
 |---|---|---|
 | **prefix** (study 3) | E → E1 → E11 → E116 → E1165 | 11 |
-| **icd3** | chapter (E00-E89) + block (E08-E13) + code | 3 |
-| **icd4** | chapter + block + category (E11) + code | 4 |
-| **icd_sub** | chapter + block + category + E116 + code | 10 |
+| **official_block** | chapter (E00-E89) + block (E08-E13) + code | 3 |
+| **official_category** | chapter + block + category (E11) + code | 4 |
+| **official_prefix** | chapter + block + category + E116 + code | 10 |
 
-icd3 is the literal three-level model: the code's coefficient is its chapter's
+official_block is the literal three-level model: the code's coefficient is its chapter's
 coefficient plus its block's plus its own. Chapters and blocks come from
 PyHealth's ICD10CM table (22 chapters, 273 blocks, 1,700 categories among the
 observed codes).
@@ -115,35 +115,35 @@ AUROC difference from the prefix tree, paired by training subset. Full data:
 | | readmission, primary | mortality, primary | readmission, every code | mortality, every code |
 |---|---|---|---|---|
 | prior only: prefix | 0.621 | 0.726 | 0.558 | 0.625 |
-| prior only: icd3 (chapter + block + code) | 0.611 | 0.704 | 0.543 | 0.601 |
-| prior only: icd4 (+ category) | 0.623 | 0.729 | 0.556 | 0.623 |
-| prior only: icd_sub | 0.623 | 0.730 | 0.558 | 0.625 |
+| prior only: official_block (chapter + block + code) | 0.611 | 0.704 | 0.543 | 0.601 |
+| prior only: official_category (+ category) | 0.623 | 0.729 | 0.556 | 0.623 |
+| prior only: official_prefix | 0.623 | 0.730 | 0.558 | 0.625 |
 | own + prior: prefix | 0.653 | 0.766 | 0.580 | 0.665 |
-| own + prior: icd3 | 0.652 | 0.764 | 0.579 | 0.665 |
-| own + prior: icd4 | 0.654 | 0.766 | 0.580 | 0.665 |
-| own + prior: icd_sub | 0.654 | 0.766 | 0.580 | 0.665 |
+| own + prior: official_block | 0.652 | 0.764 | 0.579 | 0.665 |
+| own + prior: official_category | 0.654 | 0.766 | 0.580 | 0.665 |
+| own + prior: official_prefix | 0.654 | 0.766 | 0.580 | 0.665 |
 
-* **Chapter + block + code (icd3) is a weaker prior.** On its own it is
+* **Chapter + block + code (official_block) is a weaker prior.** On its own it is
   0.010 to 0.024 AUROC below the prefix tree at full data, and the gap grows
   with data. It lacks the 3-character category, which carries a large share of
-  the variance (in icd4 the category sd is 0.28 for readmission and 0.53 for
+  the variance (in official_category the category sd is 0.28 for readmission and 0.53 for
   mortality). Its break-even is correspondingly lower (readmission: 16 primary
   and 30 every-code, against 23 and 71). With the code's own data the gap
   closes to 0 to 0.002 at full data and at most 0.004 from 1.7k
   admissions up. At 514 admissions it is the best tree for readmission in
   primary mode (+0.010), but not for mortality (−0.006).
-* **Adding the category (icd4) matches the prefix tree.** Primary mode, prior
+* **Adding the category (official_category) matches the prefix tree.** Primary mode, prior
   alone: +0.002 to +0.005 AUROC for mortality from 1.7k admissions up, and up
   to +0.002 for readmission from 17k. Every-code mode: 0.001 to 0.003 lower.
   With own data it is within 0.006 of the prefix tree at every size and
   within 0.001 at full data. The prefix tree's first letter and two-character
   levels are not ICD levels; the official chapters and blocks do as well as
   them, no better.
-* **Adding the subcategory prefixes (icd_sub)** changes nothing further.
+* **Adding the subcategory prefixes (official_prefix)** changes nothing further.
 
 ### What each level carries
 
-Fitted prior sds (log-odds) of the icd4 tree at full data, primary diagnoses:
+Fitted prior sds (log-odds) of the official_category tree at full data, primary diagnoses:
 
 | | chapter | block | category | code |
 |---|---|---|---|---|
@@ -155,7 +155,7 @@ chapter dominates.
 
 ![chapters](../output/hier4/chapters.png)
 
-The chapter coefficients of the icd3 model, both outcomes on one axis.
+The chapter coefficients of the official_block model, both outcomes on one axis.
 Neoplasms, blood, respiratory and circulatory disease raise 1-year mortality
 (+0.6 to +1.1); pregnancy lowers it by 3.4 (0.1% of such admissions die
 within the year) and congenital conditions by −1.0. Mental and behavioural

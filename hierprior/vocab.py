@@ -631,7 +631,7 @@ def study4_data():
     chapters.sort(key=lambda c: -c["mort1y"]["theta"])
     return {"base_rate": {o: float(expit(full[(o, "primary", "prefix")]["b0"])) for o in ("readmit", "mort1y")},
             "scaling": scaling, "breakeven": breakeven, "calibration": calib, "chapters": chapters,
-            "sd_icd4": {o: full[(o, "primary", "icd4")]["sd"][:4] for o in ("readmit", "mort1y")},
+            "sd_official_category": {o: full[(o, "primary", "official_category")]["sd"][:4] for o in ("readmit", "mort1y")},
             "sd_naive": {o: full[(o, "primary", "prefix")]["sd"][-1] for o in ("readmit", "mort1y")},
             "correlogram": {o: {k: g[k] for k in ("codes", "empirical", "se", "model", "true_var", "model_var")}
                             for o, g in X["correlogram"].items()}}

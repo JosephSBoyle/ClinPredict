@@ -26,9 +26,9 @@ from hierprior.levels import MODES, OUT, OUTCOMES, TREES
 OUTCOME = {"readmit": "30-day readmission", "mort1y": "1-year mortality"}
 LS = {"mort1y": "-", "readmit": "--"}
 MODE = {"primary": "Primary diagnosis only (one code per admission)", "any": "Every code occurrence"}
-TREE = {"prefix": "prefix tree (study 3)", "icd3": "chapter + block + code",
-        "icd4": "chapter + block + category + code", "icd_sub": "chapter + block + category + prefixes + code"}
-TREE_COLOR = {"icd3": "#2a78d6", "icd4": "#eb6834", "icd_sub": "#1baf7a"}
+TREE = {"prefix": "prefix tree (study 3)", "official_block": "chapter + block + code",
+        "official_category": "chapter + block + category + code", "official_prefix": "chapter + block + category + prefixes + code"}
+TREE_COLOR = {"official_block": "#2a78d6", "official_category": "#eb6834", "official_prefix": "#1baf7a"}
 EST = {"own": ("Own data + naive prior N(0, s2)", "#2a78d6"),
        "tree": ("Hierarchical prior only (relatives)", "#eb6834"),
        "post": ("Own data + hierarchical prior", "#1baf7a")}
@@ -128,7 +128,7 @@ def curve_plot(C):
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
     lines = {"naive": ("Own data + naive prior N(0, s2)", "#2a78d6", "prefix"),
              "prefix": ("Own data + prefix-tree prior", "#1baf7a", "prefix"),
-             "icd3": ("Own data + chapter/block/code prior", "#eb6834", "icd3")}
+             "official_block": ("Own data + chapter/block/code prior", "#eb6834", "official_block")}
     for ax, mode in zip(axes, ("primary", "any")):
         for o in ("mort1y", "readmit"):
             for k, (lab, col, t) in lines.items():

@@ -63,11 +63,14 @@ All θ penalised the same with L2 norm.
 
 ## Endpoints
 
-- **Primary:** absolute difference in test AUROC between the baseline LR models
+**Primary:** absolute difference in test AUROC between the baseline LR models
 and the proposed variants.
 
+**Secondary**
 - Calibration slope and intercept.
 - The number of samples at which standard LR w/ l2  matches the proposed hierarchical
 models
 - discr./calib. on admissions whose diagnoses were rare (<10) or unseen (0)
 in the local training set.
+- analyse cases in which the prediction under basic LR and hierprior-LR would be most
+different.

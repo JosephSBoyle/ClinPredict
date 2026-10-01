@@ -33,14 +33,16 @@ ancestors' embeddings inside an RNN. It shows that ontologies help rare
 codes, but it is not interpretable at the coefficient level.
 
 ## Data and design
+Datasets:
+NHS Notts NNICB via GPRCC db.
+MIMIC-IV 3.1
 
-- MIMIC-IV 3.1, adult admissions with all diagnoses in ICD-10-CM, in-hospital
-  deaths excluded. The patient split is the one used in studies 1 to 4
-  (70 / 10 / 20).
-- Prediction outcomes: 30-day readmission, and death within 365 days of discharge.
-- Input data:  age, sex, admission type, length of stay, and admissions in the last
-12 months
-- Hyperparameters and all analysis choices are fixed on dev. The test split is
+Tasks:
+death within 365 days of discharge
+[30-day readmissions]
+
+Additional input data: age, sex, admission type, length of stay, and admissions in the last
+12 months Hyperparameters and all analysis choices are fixed on dev. The test split is
   scored once. Reported to TRIPOD+AI.
 
 ## Logistic Regression Models

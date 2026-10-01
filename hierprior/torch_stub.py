@@ -68,7 +68,7 @@ class Data:
             yield to_torch(self.X_sp[b]), torch.from_numpy(self.y_np[b].astype(np.float32))
 
 
-class HierModel(nn.Module):
+class MultilevelModel(nn.Module):
     """Base: maps a sparse admission x code batch to one logit per admission."""
 
     def __init__(self, data: Data):
@@ -98,7 +98,7 @@ def evaluate(model, data, s=1):
 def train(model, data, epochs=10, lr=1e-2, batch_size=4096):
     """Minimise mean BCE + penalty / n_train with Adam; prints dev metrics per epoch."""
     n = int((data.split == 0).sum())
-    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    opt = torch.optim.SGD(model.parameters(), lr=lr)
     bce = nn.BCEWithLogitsLoss()
     for ep in range(epochs):
         model.train()
@@ -112,11 +112,11 @@ def train(model, data, epochs=10, lr=1e-2, batch_size=4096):
     return model
 
 
-class ReadmitModel(HierModel):
+class ReadmitModel(MultilevelModel):
     """TODO: 30-day readmission."""
 
 
-class MortalityModel(HierModel):
+class MortalityModel(MultilevelModel):
     """TODO: 1-year mortality."""
 
 

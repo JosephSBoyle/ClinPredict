@@ -1,5 +1,5 @@
 """Study 2 scaling experiments (docs/idea2.md): ancestor-indicator LR with one
-L2 penalty ("rollup", the baseline) vs learned per-group Gaussian priors
+L2 penalty ("rollup", (AKA truncate) the baseline) vs learned per-group Gaussian priors
 ("hier"; "hier0" and study 1's leaf-only "l2" as exploratory references).
 
   .venv/Scripts/python -m hierprior.experiment2 [--jobs 4]

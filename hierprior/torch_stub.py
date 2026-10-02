@@ -35,16 +35,16 @@ def to_torch(M):
 
 
 class Data:
-    """Everything a model needs, for one task ("readmit" or "mort1y"),
+    """Everything a model needs for one task.
     design mode ("any" or "primary") and tree ("prefix", "official_block", "official_category", "official_prefix")."""
 
-    def __init__(self, task="readmit", mode="any", tree="prefix"):
-        X, y_readmit, subj, split, hier = load()
+    def __init__(self, task, mode="any", tree="prefix"):
+        X, y_readmission, subj, split, hier = load()
         if tree != "prefix":
             hier = ICDTree(hier.leaves, category=tree != "official_block", subcategories=tree == "official_prefix")
         if mode == "primary":
             X = primary_design(hier)
-        y = y_readmit if task == "readmit" else mortality_1y(build_cohort()[0])
+        y = y_readmission if task == "readmission" else mortality_1y(build_cohort()[0])
         self.task, self.mode, self.tree = task, mode, tree
         self.X_sp, self.y_np, self.subj, self.split, self.hier = X.tocsr(), y, subj, split, hier
         self.A_sp = hier.ancestors_matrix().tocsr()            # (n_codes, n_nodes)
@@ -74,7 +74,7 @@ class MultilevelModel(nn.Module):
     def __init__(self, data: Data):
         super().__init__()
         self.data = data
-        self.b0 = nn.Parameter(torch.tensor(float(np.log(data.base_rate / (1 - data.base_rate)))))
+        self.bias = nn.Parameter(torch.tensor(float(np.log(data.base_rate / (1 - data.base_rate)))))
 
     def forward(self, X):
         """X: (batch, n_codes) sparse CSR -> (batch,) logits."""
@@ -96,9 +96,9 @@ def evaluate(model, data, s=1):
 
 
 def train(model, data, epochs=10, lr=1e-2, batch_size=4096):
-    """Minimise mean BCE + penalty / n_train with Adam; prints dev metrics per epoch."""
+    """Minimise mean BCE + penalty / n_train with SGD."""
     n = int((data.split == 0).sum())
-    opt = torch.optim.SGD(model.parameters(), lr=lr)
+    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.0)
     bce = nn.BCEWithLogitsLoss()
     for ep in range(epochs):
         model.train()
@@ -112,19 +112,10 @@ def train(model, data, epochs=10, lr=1e-2, batch_size=4096):
     return model
 
 
-class ReadmitModel(MultilevelModel):
-    """TODO: 30-day readmission."""
-
-
-class MortalityModel(MultilevelModel):
-    """TODO: 1-year mortality."""
-
-
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--task", default="readmit", choices=["readmit", "mort1y"])
+    ap.add_argument("--task", default="readmission", choices=["readmission", "mort1y"])
     ap.add_argument("--mode", default="any", choices=["any", "primary"])
     ap.add_argument("--tree", default="prefix", choices=["prefix", "official_block", "official_category", "official_prefix"])
     a = ap.parse_args()
     d = Data(a.task, a.mode, a.tree)
-    train({"readmit": ReadmitModel, "mort1y": MortalityModel}[a.task](d), d)

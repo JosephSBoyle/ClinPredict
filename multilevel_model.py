@@ -12,9 +12,10 @@ class LogisticRegression(MultilevelModel):
     ŷ = p(y|x,θ,β)
     """
 
-    def __init__(self, data: Data):
+    def __init__(self, data: Data, sd=1):
         super().__init__(data)
         self.weights = nn.Parameter(torch.zeros(data.n_codes))
+        self.sd = sd
 
     def forward(self, X: torch.Tensor):
         """X: (batch, n_codes) -> (batch,) logits."""
@@ -23,7 +24,7 @@ class LogisticRegression(MultilevelModel):
         return logits
         
     def penalty(self):
-        return 0.5 * (self.weights ** 2).sum()
+        return 0.5 * (self.weights ** 2).sum() / self.sd**2
 
 def indicators(X, A):
     """Binary 'any code under node v' matrix from leaf counts X and A = leaf -> nodes."""
@@ -40,7 +41,7 @@ class MultiLevel_ICD10(MultilevelModel):
     def __init__(self, data: Data, sd=0.5):
         """Initialise the multilevel logistic regression model
         
-        :param init_sd: the standard deviation of each coefficient
+        :param sd: the standard deviation of each coefficient
         """
         super().__init__(data)
 
@@ -54,8 +55,8 @@ class MultiLevel_ICD10(MultilevelModel):
 
     def forward(self, X: torch.Tensor):
         """X: (batch, n_codes) sparse CSR -> (batch,) logits."""
-        w = (self.data.A @ self.weights[:, None]).squeeze(1)        # (n_codes, ) path sums
-        return (X @ w[:, None]).squeeze(1) + self.bias # (batch,)
+        w = (self.data.A @ self.weights)        # (n_codes, ) path sums
+        return X @ w + self.bias # (batch,)
 
     def penalty(self):
         # normal density fn:
@@ -67,7 +68,7 @@ class MultiLevel_ICD10(MultilevelModel):
         return 0.5 * (self.weights[1:]**2 / variance[1:]).sum() # node 0 is the hierarchy root; not used
 
 class VariationalMultiLevel(MultilevelModel):
-    def __init__(self, data, init_sd: float = 0.5):
+    def __init__(self, data, init_sd: float = 1e-3):
         """
         :param init_sd: the initial standard deviation of each parameter
         """

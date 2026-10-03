@@ -95,7 +95,7 @@ def evaluate(model, data, s=1):
     return {"auroc": roc_auc_score(y, p), "ll_reduction_pct": 100 * (1 - ll / ll0)}
 
 
-def train(model, data, epochs=10, lr=1e-2, batch_size=4096):
+def train(model, data, epochs=25, lr=1e-2, batch_size=4096):
     """Minimise mean BCE + penalty / n_train with SGD."""
     n = int((data.split == 0).sum())
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.0)
